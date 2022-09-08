@@ -51,7 +51,7 @@ DEFAULT_VARIABLES = [ # struct fields defined in flexsea/dev_spec/ActPackState.p
 MOTOR_CLICKS_PER_REVOLUTION = 16384 
 RAD_PER_SEC_PER_GYRO_LSB = np.pi/180/32.8
 G_PER_ACCELEROMETER_LSB = 1./8192
-NM_PER_AMP = 0.146
+NM_PER_AMP = 0.1129 # NM_PER_AMP = 0.146
 RAD_PER_CLICK = 2*np.pi/MOTOR_CLICKS_PER_REVOLUTION
 RAD_PER_DEG = np.pi/180.
 ticks_to_motor_radians = lambda x: x*(np.pi/180./45.5111)
@@ -71,7 +71,8 @@ class ActPackMan(object):
     
     def __init__(self, devttyACMport, baudRate=230400, csv_file_name=None,
         hdf5_file_name=None, vars_to_log=DEFAULT_VARIABLES, gear_ratio=1.0,
-        printingRate = 10, updateFreq = 100, shouldLog = False, logLevel=6):
+        printingRate = 10, updateFreq = 100, shouldLog = False, logLevel=6,
+        frictionCompensate=False):
         """ Intializes variables, but does not open the stream. """
 
         #init printer settings
@@ -80,6 +81,7 @@ class ActPackMan(object):
         self.logLevel = logLevel
         self.prevReadTime = time.time()-1/self.updateFreq
         self.gear_ratio = gear_ratio
+        self.frictionCompensate = frictionCompensate
 
         # self.varsToStream = varsToStream
         self.baudRate = baudRate
@@ -322,6 +324,11 @@ class ActPackMan(object):
         self.set_motor_acceleration_radians_per_second_squared(acc*self.gear_ratio)
 
     def set_output_torque_newton_meters(self, torque):
+        if self.frictionCompensate:
+            fc = 0.3773
+            fg = 0.0896
+            friction = (fc+fg*abs(self.i)) * self.θd/(abs(self.θd)+1e-1)
+            torque +=  0.8*friction
         self.set_motor_torque_newton_meters(torque/self.gear_ratio)
 
     # other
