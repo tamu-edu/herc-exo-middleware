@@ -43,7 +43,8 @@ DEFAULT_VARIABLES = [ # struct fields defined in flexsea/dev_spec/ActPackState.p
     "state_time",
     "mot_ang", "mot_vel", "mot_acc",
     "mot_volt", "mot_cur", 
-    "batt_volt", "batt_curr"
+    "batt_volt", "batt_curr", 
+    "status_mn", "status_ex", "status_re"
 ]
 
 
@@ -191,7 +192,7 @@ class ActPackMan(object):
         assert(isfinite(kp) and 0 <= kp and kp <= 1000)
         assert(isfinite(ki) and 0 <= ki and ki <= 1000)
         assert(isfinite(kd) and 0 <= kd and kd <= 1000)
-        self.set_voltage_qaxis_volts(0.0)
+        # self.set_voltage_qaxis_volts(0.0)
         self._state=_ActPackManStates.POSITION
         FlexSEA().set_gains(self.dev_id, kp, ki, kd, 0, 0, 0)
         self.set_motor_angle_radians(self.get_motor_angle_radians())
@@ -250,7 +251,7 @@ class ActPackMan(object):
 
     def set_voltage_qaxis_volts(self, voltage_qaxis):
         self._state = _ActPackManStates.VOLTAGE # gains must be reset after reverting to voltage mode.
-        FlexSEA().send_motor_command(self.dev_id, fxe.FX_NONE, int(voltage_qaxis*1000))
+        FlexSEA().send_motor_command(self.dev_id, fxe.FX_VOLTAGE, int(voltage_qaxis*1000))
 
     def get_current_qaxis_amps(self):
         if (self.act_pack is None):
