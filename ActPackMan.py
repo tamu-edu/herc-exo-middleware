@@ -175,7 +175,9 @@ class ActPackMan(object):
 
         # Automatically save all the data as a csv file
         if self.csv_file_name is not None:
-            self.csv_writer.writerow([time.time()]+[getattr(self.act_pack,x) for x in self.vars_to_log])
+            self.csv_writer.writerow([time.time()]+[
+                getattr(self.act_pack,x) if hasattr(self.act_pack,x) else getattr(self, x) 
+                for x in self.vars_to_log])
 
         if self.hdf5_file_name is not None:
             raise NotImplemented()
@@ -329,7 +331,7 @@ class ActPackMan(object):
     def get_temp_celsius(self):
         if (self.act_pack is None):
             raise RuntimeError("ActPackMan not updated before state is queried.")
-        return self.act_pack.temp*1.0 # expects Celsius
+        return self.act_pack.temperature*1.0 # expects Celsius
 
     def get_gyro_vector_radians_per_second(self):
         if (self.act_pack is None):

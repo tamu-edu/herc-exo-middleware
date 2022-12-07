@@ -8,35 +8,42 @@ sys.path.append(r'/usr/share/python3-mscl/')    # Path of the MSCL)
 import traceback
 import mscl
 
-
+DEFAULT_VARIABLES = ["R"]
 
 class AhrsManager():
-    def __init__(self, csv_file_name=None, dt=0.01, port="/dev/ttyACM0"):
+    def __init__(self, csv_file_name=None, dt=0.01, variables=DEFAULT_VARIABLES, port="/dev/ttyACM0"):
         self.port = realpath(port) # dereference symlinks
         self.save_csv = not (csv_file_name is None)
         self.csv_file_name = csv_file_name
         self.csv_file = None
         self.csv_writer = None
         self.prevTime = 0.0
-        self.R = np.eye(3)
-        self.init_R = None
-        self.R_prime = None
-        self.dt = dt
-        self.xd = np.zeros((3,1))
-        self.x = np.zeros((3,1))
-        self.xd_forget = 0.0
-        self.x_forget = 0.0
-        self.acc_bias = np.zeros((3,1))
-        self.lp_xdd = 0.0
+        self.variables=variables
+        if "R" in self.variables:
+            self.R = np.eye(3)
+            self.init_R = None
+            self.R_prime = None
+            self.dt = dt
+            self.xd = np.zeros((3,1))
+            self.x = np.zeros((3,1))
+            self.xd_forget = 0.0
+            self.x_forget = 0.0
+            self.acc_bias = np.zeros((3,1))
+            self.lp_xdd = 0.0
+        self.saved = {var:None for var in self.variables if var != "R"}
 
     def __enter__(self):
         if self.save_csv:
             with open(self.csv_file_name,'w') as fd:
                 writer = csv.writer(fd)
-                writer.writerow(["pi_time",
-                    "r00", "r01", "r02",
-                    "r10", "r11", "r12",
-                    "r20", "r21", "r22"])
+                columns = ["pi_time"] + [var for var in self.variables if var!="R"]
+                if "R" in self.variables:
+                    columns+= ["r00", "r01", "r02",
+                            "r10", "r11", "r12",
+                            "r20", "r21", "r22"]
+
+
+                writer.writerow(columns)
             self.csv_file = open(self.csv_file_name,'a').__enter__()
             self.csv_writer = csv.writer(self.csv_file)
 
@@ -96,29 +103,38 @@ class AhrsManager():
         microstrainData = self.readIMUnode(timeout=0)# 0ms
         # print([microstrainDatum.keys() for microstrainDatum in microstrainData ])
         for datum in microstrainData:
-            if 'orientMatrix' in datum.keys():
-                self.R = datum['orientMatrix']
-                if self.init_R is None:
-                    self.init_R = np.array(self.R)
-                self.R_prime = self.R@self.init_R.T
-            if 'deltaVelX' in datum.keys():
-                self.xdd = self.R_prime.T@np.array([[datum['deltaVelX'], datum['deltaVelY'], datum['deltaVelZ']]]).T*9.81/self.dt
-                self.lp_xdd += 0.4*(self.xdd-self.lp_xdd)
-                self.xd += (self.xdd - self.xd_forget * self.xd + self.acc_bias) * self.dt
-                if np.linalg.norm(self.xdd - self.lp_xdd)<1e-1:
-                    self.xd*=0
-                    self.acc_bias = -self.lp_xdd
+            for var in self.variables:
+                if var is None:
+                    print(microstrainData)
+                elif var == "R":
+                    if 'orientMatrix' in datum.keys():
+                        self.R = datum['orientMatrix']
+                        if self.init_R is None:
+                            self.init_R = np.array(self.R)
+                        self.R_prime = self.R@self.init_R.T
+                    if 'deltaVelX' in datum.keys():
+                        self.xdd = self.R_prime.T@np.array([[datum['deltaVelX'], datum['deltaVelY'], datum['deltaVelZ']]]).T*9.81/self.dt
+                        self.lp_xdd += 0.4*(self.xdd-self.lp_xdd)
+                        self.xd += (self.xdd - self.xd_forget * self.xd + self.acc_bias) * self.dt
+                        if np.linalg.norm(self.xdd - self.lp_xdd)<1e-1:
+                            self.xd*=0
+                            self.acc_bias = -self.lp_xdd
 
-                self.x += (self.xd - self.x_forget * self.x)* self.dt
+                        self.x += (self.xd - self.x_forget * self.x)* self.dt
+                elif var in datum.keys():
+                    self.saved[var] = datum[var]
+                    setattr(self, var, self.saved[var])
+
         # self.R = self.readIMUnode()['orientMatrix']
         # self.R= np.eye(3)
         dur = time.time()-t0
         if self.save_csv:
-            self.csv_writer.writerow([time.time()
-                , self.R[0,0], self.R[0,1], self.R[0,2]
-                , self.R[1,0], self.R[1,1], self.R[1,2]
-                , self.R[2,0], self.R[2,1], self.R[2,2]
-                ])
+            row = [time.time()] + [self.saved[var] for var in self.variables if var!="R"]
+            if "R" in self.variables:
+                row+=   [ self.R[0,0], self.R[0,1], self.R[0,2]
+                        , self.R[1,0], self.R[1,1], self.R[1,2]
+                        , self.R[2,0], self.R[2,1], self.R[2,2] ]
+            self.csv_writer.writerow(row)
         #print(self.R[0,0], self.R[1,1], self.R[2,2])
         return 1
 
