@@ -85,9 +85,11 @@ class SoftRealtimeLoop(object):
 
   def __del__(self):
     if self.report:
-      print('In %d cycles at %.2f Hz:'%(self.n, 1./self.dt))
-      print('\tavg error: %.3f milliseconds'% (1e3*self.sum_err/self.n))
-      print('\tstddev error: %.3f milliseconds'% (1e3*sqrt((self.sum_var-self.sum_err**2/self.n)/(self.n-1))))
+      print('In %d cycles (%.2f sec total) at %.2f Hz (%.2f Hz achieved):'%(self.n, self.time(), 1./self.dt, self.n/self.time()))
+      if self.n>1:
+        print('\tavg error: %.3f milliseconds'% (1e3*self.sum_err/self.n))
+      if self.n>2:
+        print('\tstddev error: %.3f milliseconds'% (1e3*sqrt((self.sum_var-self.sum_err**2/self.n)/(self.n-1))))
       print('\tpercent of time sleeping: %.1f %%' % (self.sleep_t_agg/self.time()*100.))
 
   @property
