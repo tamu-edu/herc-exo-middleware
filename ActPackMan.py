@@ -71,7 +71,7 @@ class ActPackMan(object):
     """
     
     def __init__(self, devttyACMport, baudRate=230400, csv_file_name=None,
-        hdf5_file_name=None, vars_to_log=DEFAULT_VARIABLES, gear_ratio=1.0,
+        hdf5_file_name=None, vars_to_log=DEFAULT_VARIABLES, zero_torque_is_safe=False, gear_ratio=1.0,
         printingRate = 10, updateFreq = 100, shouldLog = False, logLevel=6):
         """ Intializes variables, but does not open the stream. """
 
@@ -81,6 +81,7 @@ class ActPackMan(object):
         self.logLevel = logLevel
         self.prevReadTime = time.time()-1/self.updateFreq
         self.gear_ratio = gear_ratio
+        self.zero_torque_is_safe=zero_torque_is_safe
 
         # self.varsToStream = varsToStream
         self.baudRate = baudRate
@@ -138,14 +139,20 @@ class ActPackMan(object):
             t0=time.time()
             fxs = FlexSEA() # singleton
             # fxs.send_motor_command(self.dev_id, fxe.FX_NONE, 0) # 0 mV
-            self.v = 0.0
+            if self.zero_torque_is_safe:
+                self.i = 0.0
+            else:
+                self.v = 0.0
             # fxs.stop_streaming(self.dev_id) # experimental
             # sleep(0.1) # Works
             self.update()
             time.sleep(1.0/self.updateFreq) # Works
             while(abs(self.i)>0.1):
                 self.update()
-                self.v = 0.0
+                if self.zero_torque_is_safe:
+                    self.i = 0.0
+                else:
+                    self.v = 0.0
                 time.sleep(1.0/self.updateFreq)
                 # fxs.send_motor_command(self.dev_id, fxe.FX_NONE, 0) # 0 mV
             # sleep(0.0) # doesn't work in that it results in the following ridiculous warning:
