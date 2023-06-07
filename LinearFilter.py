@@ -145,6 +145,8 @@ def from_poly_fraction(polyNum, polyDen, dt=0.01):
 		d = polyNum[-1]/polyDen[-1]
 		D = np.array([[d]])
 		C += d*A[-1:,:]*polyDen[-1]
+	else:
+		D = np.array([[0.0]])
 		# y = nq/dq u + (n0 - d0 nq/dq + (n1 -d1 nq/dq)s +...+ (nq - dq nq/dq)s^q)/(d0 + d1 s +...+ dq s^q)u
 	x0 = np.zeros((nx,1))
 	return LinearFilter(A,B,C,D,x0,dt=dt)
