@@ -139,7 +139,7 @@ def from_poly_fraction(polyNum, polyDen, dt=0.01):
 	B[-1,0] = 1/polyDen[-1]
 	# x = 1 / (d0 + d1 s + d2 s^2 + ...) u
 	C = np.zeros((1,nx))
-	for i in range(nx):
+	for i in range(min(nx, len(polyNum))):
 		C[0,i]=polyNum[i]
 	if len(polyNum)==len(polyDen):
 		d = polyNum[-1]/polyDen[-1]
