@@ -37,12 +37,14 @@ labels = [ # matches varsToStream
     "State time",  
     "Motor angle", "Motor velocity", "Motor acceleration",  
     "Motor voltage", "Motor current",   
+    "Ankle Angle", "Ankle Velocity",
     "Battery voltage", "Battery current"
 ]
 DEFAULT_VARIABLES = [ # struct fields defined in flexsea/dev_spec/ActPackState.py
     "state_time",
     "mot_ang", "mot_vel", "mot_acc",
     "mot_volt", "mot_cur", 
+    "ank_ang", "ank_vel",
     "batt_volt", "batt_curr", 
     "status_mn", "status_ex", "status_re"
 ]
@@ -196,7 +198,8 @@ class ActPackMan(object):
     gains need to be re-specified before any other mode can be controlled.
     """
 
-    def set_position_gains(self, kp=200, ki=50, kd=0):
+    # def set_position_gains(self, kp=200, ki=50, kd=0):
+    def set_position_gains(self, kp=200, ki=0, kd=0):
         # print("setting position gains")
         assert(isfinite(kp) and 0 <= kp and kp <= 1000)
         assert(isfinite(ki) and 0 <= ki and ki <= 1000)
